@@ -6,3 +6,9 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
         fields = ['id', 'author', 'content', 'created_at']
         read_only_fields = ['id', 'author', 'created_at']
+
+class ReplySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
+        fields = ['id', 'author', 'content', 'created_at', 'parent']
+        read_only_fields = ['id', 'author', 'created_at', 'parent']
