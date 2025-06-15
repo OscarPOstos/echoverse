@@ -1,7 +1,12 @@
-from rest_framework import generics, permissions
-from .models import Post
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import generics, permissions, status
+from .models import Post, Reaction
 from rest_framework.exceptions import NotFound
 from .serializers import PostSerializer, ReplySerializer
+from .serializers import ReactionSerializer
+from django.db.models import Count
+
 
 class PostListCreateView(generics.ListCreateAPIView):
     queryset = Post.objects.all().order_by('-created_at')
@@ -38,3 +43,32 @@ class ReplyListCreateView(generics.ListCreateAPIView):
         except Post.DoesNotExist:
             raise NotFound("Post principal no encontrado.")
         serializer.save(author=self.request.user, parent=parent_post)
+
+
+class ReactToPostView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, post_id):
+        emoji = request.data.get("emoji")
+        if emoji not in dict(Reaction.EMOJI_CHOICES):
+            return Response({"error": "Emoji no permitido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        reaction, created = Reaction.objects.get_or_create(
+            user=request.user, post_id=post_id, emoji=emoji
+        )
+        if not created:
+            return Response({"detail": "Ya reaccionaste con ese emoji."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"detail": "Reacción registrada."}, status=status.HTTP_201_CREATED)
+
+
+class ReactionSummaryView(APIView):
+    def get(self, request, post_id):
+        summary = (
+            Reaction.objects
+            .filter(post_id=post_id)
+            .values('emoji')
+            .annotate(count=Count('emoji'))
+            .order_by('-count')
+        )
+        return Response(summary)

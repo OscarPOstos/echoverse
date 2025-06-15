@@ -9,3 +9,20 @@ class Post(models.Model):
 
     def __str__(self):
         return self.content[:50]
+
+class Reaction(models.Model):
+    EMOJI_CHOICES = [
+        ('❤️', 'Corazón'),
+        ('😮', 'Sorpresa'),
+        ('💡', 'Idea'),
+        ('😂', 'Risa'),
+        ('😢', 'Tristeza'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, related_name='reactions', on_delete=models.CASCADE)
+    emoji = models.CharField(max_length=2, choices=EMOJI_CHOICES)
+    reacted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'post', 'emoji')
