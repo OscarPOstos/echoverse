@@ -5,7 +5,29 @@ from .models import Post, Reaction
 from rest_framework.exceptions import NotFound
 from .serializers import PostSerializer, ReplySerializer
 from .serializers import ReactionSerializer
-from django.db.models import Count
+from django.db.models import Count, Q
+from django.utils.timezone import now, timedelta
+
+class ActivePostsTodayView(APIView):
+    def get(self, request):
+        today = now().date()
+        posts = Post.objects.filter(created_at__date=today).order_by('-created_at')
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data)
+
+class TopPostsView(APIView):
+    def get(self, request):
+        posts = (
+            Post.objects
+            .annotate(
+                num_replies=Count('replies', distinct=True),
+                num_reactions=Count('reactions', distinct=True),
+                popularity=Count('reactions', distinct=True) + Count('replies', distinct=True)
+            )
+            .order_by('-popularity')[:10]
+        )
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data)
 
 
 class PostListCreateView(generics.ListCreateAPIView):
